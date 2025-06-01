@@ -129,7 +129,7 @@ const SessionPage: React.FC = () => {
             {error || 'Session Not Found'}
           </h2>
           <p className="text-gray-300 mb-4">
-            {error ? error : 'This session may have ended or doesn't exist.'}
+            {error ? error : 'This session may have ended or doesn\'t exist.'}
           </p>
           <button
             onClick={() => navigate('/dashboard')}
