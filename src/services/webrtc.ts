@@ -14,7 +14,11 @@ class WebRTCService {
   private socketIdToUserIdMap: Map<string, string> = new Map();
 
   constructor() {
-    this.socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000');
+    this.socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000', {
+      transports: ['websocket'],
+      upgrade: false
+    });
+    
     this.setupSocketListeners();
     
     this.joinSound = new Howl({
@@ -29,10 +33,13 @@ class WebRTCService {
     this.socket.on('user-joined', ({ remoteSocketId, participant, isInitiator }) => {
       console.log('User joined:', remoteSocketId, isInitiator);
       this.socketIdToUserIdMap.set(remoteSocketId, participant.id);
-      this.createPeer(remoteSocketId, isInitiator);
-      this.joinSound.play();
-      if (this.onParticipantJoinHandler) {
-        this.onParticipantJoinHandler(participant, isInitiator);
+      
+      if (this.localStream) {
+        this.createPeer(remoteSocketId, isInitiator);
+        this.joinSound.play();
+        if (this.onParticipantJoinHandler) {
+          this.onParticipantJoinHandler(participant, isInitiator);
+        }
       }
     });
 
@@ -62,11 +69,8 @@ class WebRTCService {
 
   private createPeer(remoteSocketId: string, isInitiator: boolean) {
     try {
-      console.log('Creating peer connection:', remoteSocketId, isInitiator);
-      
       if (!this.localStream) {
-        console.error('Cannot create peer: localStream is null.');
-        return;
+        throw new Error('Local stream not available');
       }
 
       const peer = new SimplePeer({
@@ -76,13 +80,17 @@ class WebRTCService {
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
+            { urls: 'stun:global.stun.twilio.com:3478' },
+            {
+              urls: 'turn:global.turn.twilio.com:3478?transport=udp',
+              username: 'your_username', // Replace with actual TURN credentials
+              credential: 'your_password'
+            }
           ]
         }
       });
 
       peer.on('signal', (signal) => {
-        console.log('Sending signal to:', remoteSocketId);
         this.socket.emit('signal', {
           to: remoteSocketId,
           signal
@@ -90,7 +98,6 @@ class WebRTCService {
       });
 
       peer.on('stream', (stream) => {
-        console.log('Received stream from:', remoteSocketId);
         const userId = this.socketIdToUserIdMap.get(remoteSocketId);
         if (userId && this.onParticipantStreamHandler) {
           this.onParticipantStreamHandler(userId, stream);

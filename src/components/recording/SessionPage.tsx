@@ -156,11 +156,13 @@ const SessionPage: React.FC = () => {
   }, [isHostEnded, currentSession, user, navigate, leaveSession]);
 
   const calculateGridLayout = (participantCount: number) => {
-    if (participantCount <= 1) return 'grid-cols-1';
-    if (participantCount <= 2) return 'grid-cols-2';
-    if (participantCount <= 4) return 'grid-cols-2 md:grid-cols-2';
-    if (participantCount <= 6) return 'grid-cols-2 md:grid-cols-3';
-    return 'grid-cols-2 md:grid-cols-4';
+    const totalParticipants = participantCount + 1; // Include local user
+    if (totalParticipants <= 1) return 'grid-cols-1';
+    if (totalParticipants === 2) return 'grid-cols-1 md:grid-cols-2';
+    if (totalParticipants <= 4) return 'grid-cols-2';
+    if (totalParticipants <= 6) return 'grid-cols-2 md:grid-cols-3';
+    if (totalParticipants <= 9) return 'grid-cols-3';
+    return 'grid-cols-3 md:grid-cols-4';
   };
 
   if (isLoading) {
@@ -209,7 +211,7 @@ const SessionPage: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-900 min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-gray-900">
       <header className="bg-gray-800 p-4 text-white flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">{currentSession.name}</h1>
@@ -279,8 +281,8 @@ const SessionPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-4 flex flex-col">
-        <div className={`flex-1 grid gap-4 ${calculateGridLayout(currentSession?.participants.length || 1)}`}>
+      <main className="flex-1 flex flex-col p-4 overflow-hidden">
+        <div className={`flex-1 grid gap-4 ${calculateGridLayout(currentSession?.participants.length || 0)}`}>
           <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
             <video
               ref={localVideoRef}
@@ -322,16 +324,18 @@ const SessionPage: React.FC = () => {
             ))}
         </div>
 
-        <RecordingControls 
-          isRecording={isRecording}
-          isPaused={isPaused}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-          onPauseRecording={pauseRecording}
-          onResumeRecording={resumeRecording}
-        />
+        <div className="mt-4">
+          <RecordingControls 
+            isRecording={isRecording}
+            isPaused={isPaused}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            onPauseRecording={pauseRecording}
+            onResumeRecording={resumeRecording}
+          />
+        </div>
         
-        <div className="bg-gray-800 p-4 rounded-lg flex items-center justify-center space-x-4">
+        <div className="mt-4 bg-gray-800 p-4 rounded-lg flex items-center justify-center space-x-4">
           <button
             onClick={() => {
               if (streamRef.current) {
